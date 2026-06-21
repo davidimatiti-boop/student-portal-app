@@ -1,0 +1,26 @@
+<aside class="sidebar">
+  <a href="/" class="sidebar-brand">
+    <span class="sidebar-brand-mark">🎓</span>
+  </a>
+  <nav class="sidebar-nav">
+    <a href="/dashboard" class="<%= active === 'dashboard' ? 'active' : '' %>">
+      <span class="sidebar-icon">📊</span> Dashboard
+    </a>
+    <a href="/courses" class="<%= active === 'courses' ? 'active' : '' %>">
+      <span class="sidebar-icon">📚</span> Courses
+    </a>
+    <a href="/grades" class="<%= active === 'grades' ? 'active' : '' %>">
+      <span class="sidebar-icon">🎓</span> Grades
+    </a>
+    <a href="/fees" class="<%= active === 'fees' ? 'active' : '' %>">
+      <span class="sidebar-icon">💳</span> Fees
+    </a>
+    <a href="/profile" class="<%= active === 'profile' ? 'active' : '' %>">
+      <span class="sidebar-icon">👤</span> Profile
+    </a>
+  </nav>
+  <form action="/logout" method="POST" class="sidebar-logout">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <button type="submit"><span class="sidebar-icon">🚪</span> Logout</button>
+  </form>
+</aside>

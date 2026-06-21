@@ -1,0 +1,87 @@
+<%- include('partials/head') %>
+<div class="app-shell">
+  <%- include('partials/sidebar', { active: 'dashboard' }) %>
+  <div class="main-area">
+    <%- include('partials/topbar') %>
+    <section class="content">
+      <div class="welcome-banner">
+        <div class="welcome-banner-text">
+          <span class="welcome-date"><%= todayLabel %></span>
+          <h1>Welcome back, <%= firstName %>!</h1>
+          <p>Always stay updated in your student portal.</p>
+        </div>
+        <div class="welcome-banner-decor" aria-hidden="true">
+          <span class="decor-dot decor-dot--teal"></span>
+          <span class="decor-dot decor-dot--pink"></span>
+          <span class="decor-dot decor-dot--yellow"></span>
+          <span class="welcome-banner-emoji">🎓</span>
+        </div>
+      </div>
+
+      <div class="dashboard-columns">
+        <div class="dashboard-main">
+          <h2 class="section-title">Finance</h2>
+          <div class="finance-cards">
+            <div class="finance-card">
+              <span class="finance-icon">🪙</span>
+              <p class="finance-amount"><%= totalDue %></p>
+              <p class="finance-label">Total Payable</p>
+            </div>
+            <div class="finance-card finance-card--active">
+              <span class="finance-icon">💳</span>
+              <p class="finance-amount"><%= totalPaid %></p>
+              <p class="finance-label">Total Paid</p>
+            </div>
+            <div class="finance-card">
+              <span class="finance-icon">📊</span>
+              <p class="finance-amount"><%= balance %></p>
+              <p class="finance-label">Balance</p>
+            </div>
+          </div>
+
+          <div class="section-header">
+            <h2 class="section-title">Enrolled Courses</h2>
+            <a href="/courses" class="see-all">See all</a>
+          </div>
+          <% if (enrolledCourses.length === 0) { %>
+            <div class="card"><p>You are not enrolled in any courses yet. <a href="/courses">Browse courses</a>.</p></div>
+          <% } else { %>
+            <div class="lavender-card-grid">
+              <% enrolledCourses.forEach(function (course) { %>
+                <div class="lavender-card">
+                  <div>
+                    <h3><%= course.course_name %></h3>
+                    <p class="muted"><%= course.course_code %></p>
+                  </div>
+                  <a href="/courses" class="btn btn-primary btn-sm">View</a>
+                </div>
+              <% }); %>
+            </div>
+          <% } %>
+        </div>
+
+        <aside class="dashboard-side">
+          <div class="section-header">
+            <h2 class="section-title">Recent Grades</h2>
+            <a href="/grades" class="see-all">See all</a>
+          </div>
+          <div class="card">
+            <% if (recentGrades.length === 0) { %>
+              <p class="muted">No grades recorded yet.</p>
+            <% } else { %>
+              <ul class="recent-grades-list">
+                <% recentGrades.forEach(function (g) { %>
+                  <li>
+                    <span><%= g.course_code %></span>
+                    <span class="badge badge-success"><%= g.grade %></span>
+                  </li>
+                <% }); %>
+              </ul>
+            <% } %>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </div>
+</div>
+<%- include('partials/scripts') %>

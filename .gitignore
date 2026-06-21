@@ -1,0 +1,5 @@
+node_modules/
+.env
+db/student_portal.sqlite
+*.log
+.DS_Store

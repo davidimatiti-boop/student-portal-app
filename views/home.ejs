@@ -1,0 +1,17 @@
+<%- include('partials/head') %>
+<%- include('partials/public-nav') %>
+<section class="hero">
+  <h1>Welcome to the Student Portal</h1>
+  <p>Manage your courses, profile, and academic journey all in one place.</p>
+  <% if (!isAuthenticated) { %>
+    <div class="hero-actions">
+      <a href="/register" class="btn btn-primary btn-lg">Get Started</a>
+      <a href="/login" class="btn btn-secondary btn-lg">Login</a>
+    </div>
+  <% } else { %>
+    <div class="hero-actions">
+      <a href="/dashboard" class="btn btn-primary btn-lg">Go to Dashboard</a>
+    </div>
+  <% } %>
+</section>
+<%- include('partials/footer') %>

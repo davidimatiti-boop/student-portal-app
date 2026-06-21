@@ -1,0 +1,27 @@
+<%- include('partials/head') %>
+<div class="app-shell">
+  <%- include('partials/sidebar', { active: 'profile' }) %>
+  <div class="main-area">
+    <%- include('partials/topbar') %>
+    <section class="content">
+      <h1 class="page-title">My Profile</h1>
+      <% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
+      <% if (success) { %><div class="alert alert-success"><%= success %></div><% } %>
+
+      <div class="card">
+        <form action="/profile" method="POST" class="form" novalidate>
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+          <label for="full_name">Full Name</label>
+          <input type="text" id="full_name" name="full_name" value="<%= student.full_name %>" required minlength="2" maxlength="100">
+
+          <label for="email">Email Address</label>
+          <input type="email" id="email" name="email" value="<%= student.email %>" required maxlength="254">
+
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </form>
+      </div>
+    </section>
+  </div>
+</div>
+<%- include('partials/scripts') %>

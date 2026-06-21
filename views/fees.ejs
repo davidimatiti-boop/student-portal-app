@@ -1,0 +1,54 @@
+<%- include('partials/head') %>
+<div class="app-shell">
+  <%- include('partials/sidebar', { active: 'fees' }) %>
+  <div class="main-area">
+    <%- include('partials/topbar') %>
+    <section class="content">
+      <h1 class="page-title">School Fees</h1>
+      <p class="muted">
+        This is a simulated billing ledger for the assessment exercise &mdash; it
+        records payments against your balance and never collects real card or
+        bank details.
+      </p>
+      <% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
+      <% if (success) { %><div class="alert alert-success"><%= success %></div><% } %>
+
+      <% if (invoices.length === 0) { %>
+        <div class="card"><p>You have no fee invoices on record.</p></div>
+      <% } else { %>
+        <% invoices.forEach(function (invoice) { %>
+          <div class="card">
+            <h2><%= invoice.description %> &mdash; <%= invoice.term %></h2>
+            <table class="data-table">
+              <tbody>
+                <tr><th>Total Due</th><td><%= formatCents(invoice.amount_due_cents) %></td></tr>
+                <tr><th>Total Paid</th><td><%= formatCents(invoice.amount_paid_cents) %></td></tr>
+                <tr><th>Balance</th><td><strong><%= formatCents(invoice.balance_cents) %></strong></td></tr>
+              </tbody>
+            </table>
+
+            <% if (invoice.balance_cents > 0) { %>
+              <form action="/fees/pay" method="POST" class="form payment-form">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="invoice_id" value="<%= invoice.id %>">
+                <label for="amount-<%= invoice.id %>">Payment Amount (USD)</label>
+                <input
+                  type="text"
+                  id="amount-<%= invoice.id %>"
+                  name="amount"
+                  inputmode="decimal"
+                  placeholder="e.g. 100.00"
+                  required
+                >
+                <button type="submit" class="btn btn-primary btn-sm">Make Payment</button>
+              </form>
+            <% } else { %>
+              <span class="badge badge-success">Paid in Full</span>
+            <% } %>
+          </div>
+        <% }); %>
+      <% } %>
+    </section>
+  </div>
+</div>
+<%- include('partials/scripts') %>

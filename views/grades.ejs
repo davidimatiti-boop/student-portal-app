@@ -1,0 +1,43 @@
+<%- include('partials/head') %>
+<div class="app-shell">
+  <%- include('partials/sidebar', { active: 'grades' }) %>
+  <div class="main-area">
+    <%- include('partials/topbar') %>
+    <section class="content">
+      <h1 class="page-title">My Grades</h1>
+      <div class="card">
+        <% if (grades.length === 0) { %>
+          <p>You aren't enrolled in any courses yet. <a href="/courses">Browse courses</a>.</p>
+        <% } else { %>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Course Code</th>
+                <th>Course Name</th>
+                <th>Term</th>
+                <th>Grade</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% grades.forEach(function (row) { %>
+                <tr>
+                  <td><%= row.course_code %></td>
+                  <td><%= row.course_name %></td>
+                  <td><%= row.term || '—' %></td>
+                  <td>
+                    <% if (row.grade) { %>
+                      <span class="badge badge-success"><%= row.grade %></span>
+                    <% } else { %>
+                      <span class="badge badge-pending">Not yet graded</span>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        <% } %>
+      </div>
+    </section>
+  </div>
+</div>
+<%- include('partials/scripts') %>

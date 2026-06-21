@@ -1,0 +1,759 @@
+/* ---------- Design tokens ---------- */
+:root {
+  --color-sidebar-from: #2b2f7e;
+  --color-sidebar-to: #1c1f57;
+  --color-primary: #4c5fd7;
+  --color-primary-dark: #3a48b0;
+  --color-banner-from: #5b6ee8;
+  --color-banner-to: #2f3492;
+  --color-bg: #f4f5fb;
+  --color-surface: #ffffff;
+  --color-lavender: #eef1fc;
+  --color-border: #e7e9f5;
+  --color-text: #1b1d3a;
+  --color-muted: #8b90a8;
+  --color-success-bg: #e8fbf3;
+  --color-success-text: #1faa7d;
+  --color-error-bg: #fdeef0;
+  --color-error-text: #c23c5a;
+  --color-dot-teal: #2ec4b6;
+  --color-dot-pink: #ff7a9c;
+  --color-dot-yellow: #ffd166;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 10px 30px rgba(43, 45, 124, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+h1, h2, h3 {
+  margin: 0;
+}
+
+/* ---------- Public top bar (logged-out pages) ---------- */
+.public-topbar {
+  background: linear-gradient(135deg, var(--color-sidebar-from), var(--color-sidebar-to));
+  color: #fff;
+  box-shadow: var(--shadow);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.public-topbar-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.5rem;
+}
+
+.brand {
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.brand:hover {
+  text-decoration: none;
+  opacity: 0.9;
+}
+.brand-mark {
+  font-size: 1.3rem;
+}
+
+.public-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.inline-form {
+  display: inline;
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-block;
+  border: none;
+  border-radius: 999px;
+  padding: 0.6rem 1.3rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s, transform 0.05s;
+}
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+.btn-primary:hover {
+  background: var(--color-primary-dark);
+  text-decoration: none;
+}
+
+.btn-secondary {
+  background: #fff;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+.btn-secondary:hover {
+  background: var(--color-lavender);
+  text-decoration: none;
+}
+
+.btn-sm {
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+}
+.btn-lg {
+  padding: 0.85rem 1.85rem;
+  font-size: 1.05rem;
+}
+.btn-block {
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* ---------- Public page container ---------- */
+.page-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  min-height: calc(100vh - 140px);
+}
+
+/* ---------- App shell (sidebar + main area) for authenticated pages ---------- */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  flex: 0 0 96px;
+  background: linear-gradient(180deg, var(--color-sidebar-from), var(--color-sidebar-to));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 1.4rem;
+  margin-bottom: 2.5rem;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  flex: 1;
+}
+
+.sidebar-nav a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.7rem;
+  font-weight: 500;
+  width: 72px;
+  padding: 0.5rem 0.25rem;
+  border-radius: var(--radius-sm);
+}
+.sidebar-nav a:hover {
+  color: #fff;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.08);
+}
+.sidebar-nav a.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+}
+.sidebar-icon {
+  font-size: 1.2rem;
+}
+
+.sidebar-logout {
+  margin-top: 1.5rem;
+}
+.sidebar-logout button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  width: 72px;
+  padding: 0.5rem 0.25rem;
+  border-radius: var(--radius-sm);
+}
+.sidebar-logout button:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.main-area {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Content top bar (search + avatar) ---------- */
+.content-topbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 2rem;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sidebar-toggle {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  cursor: pointer;
+  color: var(--color-text);
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--color-bg);
+  border-radius: 999px;
+  padding: 0.55rem 1rem;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  flex: 1;
+  max-width: 320px;
+}
+
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-left: auto;
+}
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--color-lavender);
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.user-meta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.user-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.user-role {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+}
+
+/* ---------- Page content ---------- */
+.content {
+  flex: 1;
+  min-width: 0;
+  padding: 2rem;
+}
+
+.page-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 1.25rem;
+}
+
+.section-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 1.75rem 0 0.75rem;
+}
+
+.see-all {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* ---------- Welcome banner ---------- */
+.welcome-banner {
+  background: linear-gradient(135deg, var(--color-banner-from), var(--color-banner-to));
+  border-radius: var(--radius);
+  color: #fff;
+  padding: 2rem 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+.welcome-date {
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+.welcome-banner h1 {
+  font-size: 1.6rem;
+  margin: 0.4rem 0 0.3rem;
+}
+.welcome-banner p {
+  margin: 0;
+  opacity: 0.85;
+  font-size: 0.92rem;
+}
+.welcome-banner-decor {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  flex-shrink: 0;
+}
+.welcome-banner-emoji {
+  font-size: 3.5rem;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+}
+.decor-dot {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.85;
+}
+.decor-dot--teal {
+  width: 14px;
+  height: 14px;
+  background: var(--color-dot-teal);
+  top: 0;
+  left: 10px;
+}
+.decor-dot--pink {
+  width: 10px;
+  height: 10px;
+  background: var(--color-dot-pink);
+  top: 30px;
+  right: 60px;
+}
+.decor-dot--yellow {
+  width: 12px;
+  height: 12px;
+  background: var(--color-dot-yellow);
+  bottom: 10px;
+  left: 0;
+}
+
+/* ---------- Dashboard columns ---------- */
+.dashboard-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 2rem;
+  margin-top: 1.5rem;
+  align-items: start;
+}
+
+/* ---------- Finance cards ---------- */
+.finance-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.finance-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.25rem;
+  text-align: center;
+}
+.finance-card--active {
+  border: 2px solid var(--color-primary);
+}
+.finance-icon {
+  font-size: 1.6rem;
+}
+.finance-amount {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0.4rem 0 0.15rem;
+}
+.finance-label {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  margin: 0;
+}
+
+.balance-amount {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin: 0.25rem 0 1rem;
+}
+
+/* ---------- Lavender cards (courses) ---------- */
+.lavender-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.lavender-card {
+  background: var(--color-lavender);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 110px;
+}
+.lavender-card--stacked {
+  flex-direction: column;
+  align-items: flex-start;
+}
+.lavender-card h3 {
+  font-size: 1rem;
+  margin-bottom: 0.2rem;
+}
+
+/* ---------- Recent grades list ---------- */
+.recent-grades-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.recent-grades-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+
+/* ---------- Cards ---------- */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.course-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+.course-list li {
+  margin-bottom: 0.4rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.badge-success {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+.badge-pending {
+  background: #f1f5f9;
+  color: var(--color-muted);
+}
+
+/* ---------- Data tables (grades, fees) ---------- */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 0.6rem 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.data-table thead th {
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.payment-form {
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+.payment-form label {
+  margin-top: 0;
+}
+.payment-form input {
+  width: 160px;
+}
+
+/* ---------- Forms ---------- */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.form label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+.form input {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+}
+.form input:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+.form button {
+  margin-top: 1.25rem;
+  align-self: flex-start;
+}
+.hint {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+.hint.error {
+  color: var(--color-error-text);
+}
+
+/* ---------- Alerts ---------- */
+.alert {
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-sm);
+  margin: 1rem 0 0;
+  font-size: 0.92rem;
+}
+.alert-error {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+.alert-success {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+/* ---------- Auth pages ---------- */
+.auth-page {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 0;
+}
+.auth-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 2rem;
+  width: 100%;
+  max-width: 420px;
+}
+.auth-card h1 {
+  margin-top: 0;
+  text-align: center;
+}
+.auth-switch {
+  text-align: center;
+  margin-top: 1.25rem;
+  font-size: 0.9rem;
+  color: var(--color-muted);
+}
+
+/* ---------- Hero ---------- */
+.hero {
+  text-align: center;
+  padding: 4rem 1rem;
+}
+.hero h1 {
+  font-size: 2.25rem;
+  color: var(--color-primary);
+  margin-bottom: 0.5rem;
+}
+.hero p {
+  color: var(--color-muted);
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+}
+.hero-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+/* ---------- Error page ---------- */
+.error-page {
+  text-align: center;
+  padding: 4rem 1rem;
+}
+
+/* ---------- Footer (public pages) ---------- */
+.site-footer {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.muted {
+  color: var(--color-muted);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+  .nav-toggle,
+  .sidebar-toggle {
+    display: block;
+  }
+  .public-nav {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-sidebar-to);
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1rem 1.5rem;
+    display: none;
+  }
+  .public-nav.open {
+    display: flex;
+  }
+  .app-shell {
+    flex-direction: column;
+  }
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 20;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .content-topbar {
+    padding: 1rem;
+  }
+  .search-box {
+    display: none;
+  }
+  .dashboard-columns {
+    grid-template-columns: 1fr;
+  }
+  .finance-cards {
+    grid-template-columns: 1fr;
+  }
+  .welcome-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  .hero-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+}

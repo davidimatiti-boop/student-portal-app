@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: student-portal
+    runtime: node
+    plan: starter # required for a persistent Disk — the free plan has no durable storage
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true # Render generates and stores a strong random secret
+      - key: DATABASE_PATH
+        value: /var/data/student_portal.sqlite
+    disk:
+      name: student-portal-data
+      mountPath: /var/data
+      sizeGB: 1

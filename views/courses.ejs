@@ -1,0 +1,30 @@
+<%- include('partials/head') %>
+<div class="app-shell">
+  <%- include('partials/sidebar', { active: 'courses' }) %>
+  <div class="main-area">
+    <%- include('partials/topbar') %>
+    <section class="content">
+      <h1 class="page-title">Available Courses</h1>
+      <div class="lavender-card-grid">
+        <% courses.forEach(function (course) { %>
+          <div class="lavender-card lavender-card--stacked">
+            <div>
+              <h3><%= course.course_name %></h3>
+              <p class="muted"><%= course.course_code %></p>
+            </div>
+            <% if (course.is_enrolled) { %>
+              <span class="badge badge-success">Enrolled</span>
+            <% } else { %>
+              <form action="/courses/enroll" method="POST">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="course_id" value="<%= course.id %>">
+                <button type="submit" class="btn btn-primary btn-sm">Enroll</button>
+              </form>
+            <% } %>
+          </div>
+        <% }); %>
+      </div>
+    </section>
+  </div>
+</div>
+<%- include('partials/scripts') %>
