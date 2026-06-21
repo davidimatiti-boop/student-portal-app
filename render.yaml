@@ -2,7 +2,7 @@ services:
   - type: web
     name: student-portal
     runtime: node
-    plan: starter # required for a persistent Disk — the free plan has no durable storage
+    plan: free # no persistent disk needed — the database lives in Turso, not on local disk
     buildCommand: npm install
     startCommand: npm start
     envVars:
@@ -10,9 +10,7 @@ services:
         value: production
       - key: SESSION_SECRET
         generateValue: true # Render generates and stores a strong random secret
-      - key: DATABASE_PATH
-        value: /var/data/student_portal.sqlite
-    disk:
-      name: student-portal-data
-      mountPath: /var/data
-      sizeGB: 1
+      - key: TURSO_DATABASE_URL
+        sync: false # set manually in the Render dashboard — see app.turso.tech
+      - key: TURSO_AUTH_TOKEN
+        sync: false # set manually in the Render dashboard (sensitive — never commit it)

@@ -1,14 +1,32 @@
-// Opens a single shared SQLite connection used throughout the app.
-const path = require('path');
-const Database = require('better-sqlite3');
+// Opens a single shared connection to a Turso (hosted, SQLite-compatible)
+// database. All queries go over the network now, so every call site uses
+// async/await — unlike the previous local-file better-sqlite3 setup.
+require('dotenv').config();
+const { createClient } = require('@libsql/client');
 
-// DATABASE_PATH lets a host point this at a persistent disk/volume
-// (e.g. Render's mounted Disk) instead of the app's own directory, which
-// is wiped on every redeploy on most platforms.
-const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '..', 'db', 'student_portal.sqlite');
-const db = new Database(dbPath);
+const client = createClient({
+  url: process.env.TURSO_DATABASE_URL,
+  authToken: process.env.TURSO_AUTH_TOKEN,
+});
 
-// Enforce foreign key constraints (off by default in SQLite).
-db.pragma('foreign_keys = ON');
+// Thin async helpers mirroring better-sqlite3's .get/.all/.run shape, so
+// route code reads the same way it did against the old local database.
+async function get(sql, args = []) {
+  const result = await client.execute({ sql, args });
+  return result.rows[0];
+}
 
-module.exports = db;
+async function all(sql, args = []) {
+  const result = await client.execute({ sql, args });
+  return result.rows;
+}
+
+async function run(sql, args = []) {
+  const result = await client.execute({ sql, args });
+  return {
+    lastInsertRowid: Number(result.lastInsertRowid),
+    changes: result.rowsAffected,
+  };
+}
+
+module.exports = { client, get, all, run };

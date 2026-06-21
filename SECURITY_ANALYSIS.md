@@ -25,10 +25,13 @@ support a structured security assessment of the codebase.
   `express-rate-limit` (10 requests / 15 minutes) to slow down automated
   credential-stuffing / brute-force attempts.
 - **Session fixation prevention:** On both successful login and successful
-  registration, `req.session.regenerate()` is called before the session is
-  marked authenticated. This issues a brand-new session ID at the point of
-  privilege change, so an attacker cannot pre-set a victim's session ID before
-  login and then hijack the now-authenticated session.
+  registration, `req.session` is reassigned outright (`req.session = {
+  studentId }`) rather than mutated, discarding whatever session data the
+  client previously held (including any pre-set value an attacker might have
+  planted) and issuing a brand-new signed session cookie at the point of
+  privilege change. This achieves the same effect as `express-session`'s
+  `regenerate()` would have, adapted for the stateless cookie-session model
+  described in §3.
 
 ## 2. Authorization Controls
 
@@ -60,8 +63,23 @@ support a structured security assessment of the codebase.
 
 ## 3. Session Management
 
-- Sessions are managed server-side with `express-session`; the client only holds
-  an opaque session ID cookie (`sid`), never user data or credentials.
+- Sessions are **stateless, signed cookies** via `cookie-session` (`server.js`)
+  — there is no server-side session store at all. The entire session (just
+  `{ studentId, csrfToken }`) is serialized, HMAC-signed with `SESSION_SECRET`,
+  and held client-side in the `sid`/`sid.sig` cookie pair.
+  - **Why not a server-side store:** this app deploys to serverless hosts
+    (Vercel) with no single long-lived process to hold an in-memory store and
+    no guaranteed shared disk/Redis to fall back to. A signed cookie avoids
+    that dependency entirely while keeping the session payload tiny enough
+    (well under the 4KB cookie limit) to live in a cookie safely.
+  - **Trade-off vs. the previous `express-session` design:** the session
+    contents are now base64-visible to the client (tamper-*evident* via the
+    HMAC signature, but not *encrypted*) — whereas an opaque server-side
+    session ID reveals nothing. This is an acceptable trade here because the
+    only data in the session is a numeric student ID and a CSRF token, neither
+    of which is secret (the CSRF token is, by design, also embedded directly
+    in rendered HTML forms). No passwords, emails, or other PII ever go into
+    the session.
 - **Cookie hardening** (`server.js`):
   - `httpOnly: true` — inaccessible to client-side JavaScript, mitigating
     session-token theft via XSS.
@@ -70,16 +88,11 @@ support a structured security assessment of the codebase.
   - `secure: true` in production (`NODE_ENV=production`) — cookie is only sent
     over HTTPS, preventing interception on the network.
   - `maxAge: 1 hour` — bounds the session lifetime.
-  - Custom cookie name (`sid` instead of the default `connect.sid`) to avoid
-    trivially fingerprinting the framework.
-- **Logout** (`POST /logout`) calls `req.session.destroy()` and clears the cookie,
-  fully invalidating server-side session state rather than just discarding the
-  client cookie.
-- **Known limitation:** the default `express-session` `MemoryStore` is used,
-  which is fine for this assessment/demo scope but is explicitly not
-  production-safe (it leaks memory and doesn't share state across processes). A
-  production deployment should swap in a persistent store such as
-  `connect-sqlite3` or Redis.
+  - Custom cookie name (`sid` instead of the default `connect.sid`/`session`)
+    to avoid trivially fingerprinting the framework.
+- **Logout** (`POST /logout`) sets `req.session = null`, which clears the
+  cookie pair entirely — since there's no server-side store, "destroying" a
+  stateless session just means not issuing the cookie back to the client.
 
 ## 4. Input Validation Strategy
 
@@ -122,10 +135,10 @@ support a structured security assessment of the codebase.
 
 | Vulnerability | Mitigation |
 |---|---|
-| SQL Injection | All database access uses `better-sqlite3` **parameterized queries** (`?` placeholders) — no string concatenation of user input into SQL anywhere in the codebase. |
+| SQL Injection | All database access uses the Turso/`@libsql/client` **parameterized queries** (`?` placeholders, bound via an `args` array) — no string concatenation of user input into SQL anywhere in the codebase. |
 | Cross-Site Scripting (XSS) | EJS's default `<%= %>` output auto-escapes HTML entities for every piece of user-controlled data rendered into a page (names, emails, course data). Raw/unescaped `<%- %>` is only used for trusted, static partial includes — never for user input. |
-| Cross-Site Request Forgery (CSRF) | A per-session, cryptographically random CSRF token (`middleware/csrf.js`) is embedded as a hidden field in every state-changing form (login, register, logout, profile update, course enrollment) and verified with a constant-time comparison (`crypto.timingSafeEqual`) before the action is performed. Combined with `SameSite=Lax` cookies. |
-| Session Fixation | `req.session.regenerate()` on login/registration issues a fresh session ID at the authentication boundary. |
+| Cross-Site Request Forgery (CSRF) | A per-session, cryptographically random CSRF token (`middleware/csrf.js`) is embedded as a hidden field in every state-changing form (login, register, logout, profile update, course enrollment, fee payment) and verified with a constant-time comparison (`crypto.timingSafeEqual`) before the action is performed. Combined with `SameSite=Lax` cookies. |
+| Session Fixation | Full session replacement (`req.session = { studentId }`) on login/registration discards any pre-existing session and issues a fresh signed cookie at the authentication boundary (see §3). |
 | Brute-force / credential stuffing | Per-IP rate limiting on `/login` and `/register`. |
 | Account/user enumeration | Generic login error message + constant-effort dummy-hash comparison for unknown emails. |
 | Insecure Direct Object Reference (IDOR) | All profile/enrollment/fee data is scoped server-side to `req.session.studentId`; no endpoint accepts a client-supplied "which student" parameter. `/fees/pay` explicitly re-checks that the submitted `invoice_id` belongs to the caller before recording a payment. |
@@ -157,23 +170,27 @@ but this is **deliberately not a real payment integration**:
 - **A01 — Broken Access Control:** Mitigated via `requireAuth` middleware on all
   protected routes and strict server-side scoping of data to the session's
   student ID (see §2, §6).
-- **A02 — Cryptographic Failures:** Passwords hashed with bcrypt (§5); cookies
-  flagged `secure` in production so session tokens aren't sent over plaintext
-  HTTP; no sensitive data is logged.
+- **A02 — Cryptographic Failures:** Passwords hashed with bcrypt (§5); session
+  cookies are HMAC-signed with `SESSION_SECRET` and flagged `secure` in
+  production so they aren't sent over plaintext HTTP; no sensitive data
+  (passwords, emails) is ever placed in the session or logged.
 - **A03 — Injection:** Parameterized SQL queries throughout; output escaping via
   EJS auto-escaping (§6).
 - **A04 — Insecure Design:** Generic auth error messages, rate limiting, and
-  session regeneration were designed in from the start rather than bolted on.
+  full session replacement on login were designed in from the start rather
+  than bolted on. The fee-payment feature was deliberately scoped to avoid
+  ever touching real card/bank data (§6a) rather than building and then
+  trying to secure a fake payment form.
 - **A05 — Security Misconfiguration:** `helmet` applies sane default security
   headers; `.env` keeps secrets out of source control; `NODE_ENV` toggles
   cookie `secure` flag appropriately between dev and prod.
 - **A06 — Vulnerable and Outdated Components:** Dependencies are kept minimal
-  (`express`, `express-session`, `bcrypt`, `better-sqlite3`, `ejs`, `helmet`,
+  (`express`, `cookie-session`, `bcrypt`, `@libsql/client`, `ejs`, `helmet`,
   `express-rate-limit`, `dotenv`) to reduce the attack surface; run `npm audit`
   periodically as part of an assessment.
 - **A07 — Identification and Authentication Failures:** bcrypt hashing, rate
-  limiting on auth endpoints, session regeneration on login, and reasonable
-  session expiry (§1, §3).
+  limiting on auth endpoints, full session replacement on login, and
+  reasonable session expiry (§1, §3).
 - **A08 — Software and Data Integrity Failures:** No use of `eval`, dynamic
   `require`, or unpinned remote script sources in the views; static assets are
   served from a local `public/` directory only.
@@ -193,9 +210,12 @@ rather than hidden:
 - No email verification on registration.
 - No account lockout or CAPTCHA after repeated failed logins (rate limiting only).
 - No multi-factor authentication.
-- Session store is in-memory (`MemoryStore`), not suitable for multi-process or
-  production deployment.
+- Session cookies are signed but not encrypted — an attacker who reads the
+  cookie (e.g. via physical device access) can see the student ID and CSRF
+  token in plaintext, though not modify them undetected. Acceptable here since
+  neither value is sensitive on its own (§3), but a session carrying anything
+  more sensitive would need encryption (e.g. `iron-session`) on top of signing.
 - No HTTPS termination is configured in the app itself (expected to be handled
-  by a reverse proxy/load balancer in any real deployment).
+  by the hosting platform — both Vercel and Render provide it automatically).
 - No automated dependency vulnerability scanning configured (recommend adding
   `npm audit` / Dependabot in CI for a real project).

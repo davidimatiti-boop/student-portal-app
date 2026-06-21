@@ -30,7 +30,7 @@ router.get('/register', redirectIfAuthenticated, (req, res) => {
   res.render('register', { title: 'Register', error: null, formData: { full_name: '', email: '' } });
 });
 
-router.post('/register', redirectIfAuthenticated, authLimiter, verifyCsrfToken, (req, res) => {
+router.post('/register', redirectIfAuthenticated, authLimiter, verifyCsrfToken, async (req, res) => {
   const { full_name, email, password, confirm_password } = req.body;
   const formData = { full_name: full_name || '', email: email || '' };
   const render400 = (error) =>
@@ -50,27 +50,23 @@ router.post('/register', redirectIfAuthenticated, authLimiter, verifyCsrfToken, 
   }
 
   const normalizedEmail = email.trim().toLowerCase();
-  const existing = db.prepare('SELECT id FROM students WHERE email = ?').get(normalizedEmail);
+  const existing = await db.get('SELECT id FROM students WHERE email = ?', [normalizedEmail]);
   if (existing) {
     return render400('An account with this email already exists.');
   }
 
   const passwordHash = bcrypt.hashSync(password, SALT_ROUNDS);
-  const insert = db.prepare(
-    'INSERT INTO students (full_name, email, password_hash) VALUES (?, ?, ?)'
+  const result = await db.run(
+    'INSERT INTO students (full_name, email, password_hash) VALUES (?, ?, ?)',
+    [full_name.trim(), normalizedEmail, passwordHash]
   );
-  const result = insert.run(full_name.trim(), normalizedEmail, passwordHash);
-  createDefaultInvoice(result.lastInsertRowid);
+  await createDefaultInvoice(result.lastInsertRowid);
 
-  // Regenerate the session on privilege change (anonymous -> authenticated)
-  // to prevent session fixation attacks.
-  req.session.regenerate((err) => {
-    if (err) {
-      return res.status(500).render('error', { title: 'Error', message: 'Something went wrong. Please try logging in.' });
-    }
-    req.session.studentId = result.lastInsertRowid;
-    res.redirect('/dashboard');
-  });
+  // Replace the session entirely on privilege change (anonymous ->
+  // authenticated) to prevent session fixation attacks: whatever cookie the
+  // client had before is discarded and a brand new signed session is issued.
+  req.session = { studentId: result.lastInsertRowid };
+  res.redirect('/dashboard');
 });
 
 // --- Login -----------------------------------------------------------------
@@ -79,7 +75,7 @@ router.get('/login', redirectIfAuthenticated, (req, res) => {
   res.render('login', { title: 'Login', error: null, formData: { email: '' } });
 });
 
-router.post('/login', redirectIfAuthenticated, authLimiter, verifyCsrfToken, (req, res) => {
+router.post('/login', redirectIfAuthenticated, authLimiter, verifyCsrfToken, async (req, res) => {
   const { email, password } = req.body;
   const formData = { email: email || '' };
   // Deliberately generic message: don't reveal whether the email exists.
@@ -89,9 +85,10 @@ router.post('/login', redirectIfAuthenticated, authLimiter, verifyCsrfToken, (re
     return res.status(400).render('login', { title: 'Login', error: genericError, formData });
   }
 
-  const student = db
-    .prepare('SELECT id, full_name, email, password_hash FROM students WHERE email = ?')
-    .get(email.trim().toLowerCase());
+  const student = await db.get(
+    'SELECT id, full_name, email, password_hash FROM students WHERE email = ?',
+    [email.trim().toLowerCase()]
+  );
 
   // Always compare against a hash (real or dummy) so login takes a
   // consistent amount of time whether or not the account exists.
@@ -102,22 +99,15 @@ router.post('/login', redirectIfAuthenticated, authLimiter, verifyCsrfToken, (re
     return res.status(400).render('login', { title: 'Login', error: genericError, formData });
   }
 
-  req.session.regenerate((err) => {
-    if (err) {
-      return res.status(500).render('error', { title: 'Error', message: 'Something went wrong. Please try again.' });
-    }
-    req.session.studentId = student.id;
-    res.redirect('/dashboard');
-  });
+  req.session = { studentId: student.id };
+  res.redirect('/dashboard');
 });
 
 // --- Logout ------------------------------------------------------------------
 
 router.post('/logout', verifyCsrfToken, (req, res) => {
-  req.session.destroy(() => {
-    res.clearCookie('sid');
-    res.redirect('/login');
-  });
+  req.session = null;
+  res.redirect('/login');
 });
 
 module.exports = router;

@@ -8,7 +8,10 @@
     "dev": "nodemon server.js",
     "db:init": "node db/init.js"
   },
-  "keywords": ["student-portal", "security-assessment"],
+  "keywords": [
+    "student-portal",
+    "security-assessment"
+  ],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
@@ -16,13 +19,13 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.4",
     "bcrypt": "^6.0.0",
-    "better-sqlite3": "^12.11.1",
+    "cookie-session": "^2.1.1",
     "dotenv": "^17.4.2",
     "ejs": "^6.0.1",
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",
-    "express-session": "^1.19.0",
     "helmet": "^8.2.0"
   },
   "devDependencies": {

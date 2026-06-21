@@ -12,8 +12,10 @@ const SALT_ROUNDS = 12;
 // system, not a real billing integration.
 const DEFAULT_TUITION_CENTS = 75000; // $750.00
 
-function createTables() {
-  db.exec(`
+async function createTables() {
+  // executeMultiple runs a raw multi-statement SQL string (no parameters,
+  // which suits DDL fine) — Turso's equivalent of better-sqlite3's db.exec().
+  await db.client.executeMultiple(`
     CREATE TABLE IF NOT EXISTS students (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       full_name TEXT NOT NULL,
@@ -78,18 +80,18 @@ function createTables() {
 
 // Creates the standard tuition invoice for a single student. Called both
 // during seeding and whenever a new student registers (routes/auth.js).
-function createDefaultInvoice(studentId) {
-  db.prepare(
+async function createDefaultInvoice(studentId) {
+  await db.run(
     `INSERT INTO fee_invoices (student_id, term, description, amount_due_cents)
-     VALUES (?, ?, ?, ?)`
-  ).run(studentId, CURRENT_TERM, 'Tuition Fee', DEFAULT_TUITION_CENTS);
+     VALUES (?, ?, ?, ?)`,
+    [studentId, CURRENT_TERM, 'Tuition Fee', DEFAULT_TUITION_CENTS]
+  );
 }
 
-function seedCourses() {
-  const { count } = db.prepare('SELECT COUNT(*) AS count FROM courses').get();
+async function seedCourses() {
+  const { count } = await db.get('SELECT COUNT(*) AS count FROM courses');
   if (count > 0) return;
 
-  const insert = db.prepare('INSERT INTO courses (course_name, course_code) VALUES (?, ?)');
   const courses = [
     ['Introduction to Computer Science', 'CS101'],
     ['Web Application Security', 'SEC301'],
@@ -98,29 +100,17 @@ function seedCourses() {
     ['Networking Fundamentals', 'NET150'],
   ];
 
-  const insertAll = db.transaction((rows) => {
-    rows.forEach((row) => insert.run(...row));
-  });
-  insertAll(courses);
+  for (const [courseName, courseCode] of courses) {
+    await db.run('INSERT INTO courses (course_name, course_code) VALUES (?, ?)', [
+      courseName,
+      courseCode,
+    ]);
+  }
 }
 
-function seedTestStudents() {
-  const { count } = db.prepare('SELECT COUNT(*) AS count FROM students').get();
+async function seedTestStudents() {
+  const { count } = await db.get('SELECT COUNT(*) AS count FROM students');
   if (count > 0) return;
-
-  const insertStudent = db.prepare(
-    'INSERT INTO students (full_name, email, password_hash) VALUES (?, ?, ?)'
-  );
-  const getCourseId = db.prepare('SELECT id FROM courses WHERE course_code = ?');
-  const insertEnrollment = db.prepare(
-    'INSERT INTO enrollments (student_id, course_id) VALUES (?, ?)'
-  );
-  const insertGrade = db.prepare(
-    'INSERT INTO grades (student_id, course_id, term, grade) VALUES (?, ?, ?, ?)'
-  );
-  const insertPayment = db.prepare(
-    'INSERT INTO fee_payments (invoice_id, student_id, amount_cents) VALUES (?, ?, ?)'
-  );
 
   // Sample/test accounts for the security assessment. See README.md.
   // Each gets a couple of enrollments + grades, and a tuition invoice (one
@@ -146,37 +136,55 @@ function seedTestStudents() {
     },
   ];
 
-  testAccounts.forEach(({ fullName, email, password, enrollments, paymentCents }) => {
+  for (const { fullName, email, password, enrollments, paymentCents } of testAccounts) {
     const passwordHash = bcrypt.hashSync(password, SALT_ROUNDS);
-    const { lastInsertRowid: studentId } = insertStudent.run(fullName, email, passwordHash);
+    const { lastInsertRowid: studentId } = await db.run(
+      'INSERT INTO students (full_name, email, password_hash) VALUES (?, ?, ?)',
+      [fullName, email, passwordHash]
+    );
 
-    enrollments.forEach(({ courseCode, grade }) => {
-      const course = getCourseId.get(courseCode);
-      insertEnrollment.run(studentId, course.id);
-      insertGrade.run(studentId, course.id, CURRENT_TERM, grade);
-    });
-
-    createDefaultInvoice(studentId);
-    if (paymentCents > 0) {
-      const invoice = db
-        .prepare('SELECT id FROM fee_invoices WHERE student_id = ?')
-        .get(studentId);
-      insertPayment.run(invoice.id, studentId, paymentCents);
+    for (const { courseCode, grade } of enrollments) {
+      const course = await db.get('SELECT id FROM courses WHERE course_code = ?', [courseCode]);
+      await db.run('INSERT INTO enrollments (student_id, course_id) VALUES (?, ?)', [
+        studentId,
+        course.id,
+      ]);
+      await db.run(
+        'INSERT INTO grades (student_id, course_id, term, grade) VALUES (?, ?, ?, ?)',
+        [studentId, course.id, CURRENT_TERM, grade]
+      );
     }
-  });
+
+    await createDefaultInvoice(studentId);
+    if (paymentCents > 0) {
+      const invoice = await db.get('SELECT id FROM fee_invoices WHERE student_id = ?', [
+        studentId,
+      ]);
+      await db.run(
+        'INSERT INTO fee_payments (invoice_id, student_id, amount_cents) VALUES (?, ?, ?)',
+        [invoice.id, studentId, paymentCents]
+      );
+    }
+  }
 }
 
-function initializeDatabase() {
-  createTables();
-  seedCourses();
-  seedTestStudents();
+async function initializeDatabase() {
+  await createTables();
+  await seedCourses();
+  await seedTestStudents();
 }
 
 // Allow running this file directly: `node db/init.js`
 if (require.main === module) {
-  initializeDatabase();
-  console.log('Database initialized and seeded successfully.');
-  process.exit(0);
+  initializeDatabase()
+    .then(() => {
+      console.log('Database initialized and seeded successfully.');
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    });
 }
 
 module.exports = initializeDatabase;

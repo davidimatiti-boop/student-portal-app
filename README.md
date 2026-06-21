@@ -1,27 +1,37 @@
 # Student Portal
 
 A beginner-friendly Student Portal web application built with Node.js, Express, and
-SQLite. It's intended as a realistic-but-simple target for a structured
-**cybersecurity / security assessment** exercise — see [SECURITY_ANALYSIS.md](SECURITY_ANALYSIS.md)
-for the security write-up.
+a hosted SQLite-compatible database (Turso). It's intended as a realistic-but-simple
+target for a structured **cybersecurity / security assessment** exercise — see
+[SECURITY_ANALYSIS.md](SECURITY_ANALYSIS.md) for the security write-up.
 
 ## Tech Stack
 
 - **Frontend:** Server-rendered HTML via EJS templates, plain CSS, vanilla JavaScript
 - **Backend:** Node.js + Express
-- **Database:** SQLite (via `better-sqlite3`)
-- **Auth:** `express-session` (server-side sessions) + `bcrypt` password hashing
+- **Database:** [Turso](https://turso.tech) (hosted, SQLite-compatible, via `@libsql/client`)
+- **Auth:** Stateless signed-cookie sessions (`cookie-session`) + `bcrypt` password hashing
+
+The app was originally built against a local SQLite file (`better-sqlite3`) and
+in-memory sessions (`express-session`). It was migrated to a hosted DB and
+stateless cookie sessions specifically to deploy on serverless hosts (Vercel),
+which have no durable local disk and no single long-lived process to hold an
+in-memory session store. See `SECURITY_ANALYSIS.md` for the trade-offs that
+came with that move.
 
 ## Folder Structure
 
 ```
 student-portal-app/
-├── server.js               # App entry point — wires up middleware & routes
+├── server.js               # Express app — middleware & routes (exported for serverless too)
+├── api/
+│   └── index.js             # Vercel serverless entry point, re-exports server.js
+├── vercel.json              # Vercel routing + static-file bundling config
+├── render.yaml              # Render blueprint (alternative host)
 ├── config/
-│   └── database.js         # Shared SQLite connection
+│   └── database.js         # Turso client + async get/all/run helpers
 ├── db/
-│   ├── init.js              # Creates tables and seeds sample data
-│   └── student_portal.sqlite (generated at first run, gitignored)
+│   └── init.js              # Creates tables and seeds sample data (idempotent)
 ├── middleware/
 │   ├── auth.js               # requireAuth / redirectIfAuthenticated route guards
 │   └── csrf.js               # CSRF token generation & verification
@@ -36,9 +46,10 @@ student-portal-app/
 ├── utils/
 │   ├── validation.js          # Server-side input validation helpers
 │   ├── money.js                 # Cents-based money parsing/formatting
+│   ├── strings.js                # Avatar initials helper
 │   └── term.js                  # "Current term" constant used by seeding
 ├── views/                     # EJS templates
-│   ├── partials/ (header, footer, sidebar)
+│   ├── partials/ (head, public-nav, sidebar, topbar, scripts, footer)
 │   ├── home.ejs, login.ejs, register.ejs
 │   ├── dashboard.ejs, profile.ejs, courses.ejs
 │   ├── fees.ejs, grades.ejs
@@ -67,6 +78,7 @@ student-portal-app/
 
 ### Prerequisites
 - Node.js 18+ and npm
+- A free [Turso](https://turso.tech) account and database
 
 ### Steps
 
@@ -74,15 +86,21 @@ student-portal-app/
 # 1. Install dependencies
 npm install
 
-# 2. Configure environment variables
-cp .env.example .env
-# Edit .env and set a strong SESSION_SECRET, e.g.:
-#   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+# 2. Create a Turso database (skip if you already have one)
+#    Sign up / log in at https://app.turso.tech, create a database, and
+#    generate an auth token from its dashboard page.
 
-# 3. Initialize & seed the database (optional — also runs automatically on startup)
+# 3. Configure environment variables
+cp .env.example .env
+# Edit .env:
+#   - Set a strong SESSION_SECRET, e.g.:
+#       node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+#   - Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN from the Turso dashboard
+
+# 4. Initialize & seed the database (optional — also runs automatically on startup)
 npm run db:init
 
-# 4. Start the app
+# 5. Start the app
 npm start
 # or, for auto-restart during development:
 npm run dev
@@ -125,41 +143,46 @@ The seeded accounts come pre-loaded with sample data so Grades/Fees aren't empty
 ## Notes for a Security Assessment
 
 This app intentionally implements a solid security **baseline** (hashed passwords,
-session auth, CSRF tokens, parameterized queries, output escaping, rate limiting,
-security headers) so that an assessment can focus on verifying those controls hold
-up under testing — e.g. attempting to bypass CSRF protection, brute-forcing login,
-tampering with session cookies, probing for SQL injection / XSS, and checking for
-IDOR on `/profile` and `/courses/enroll`. See `SECURITY_ANALYSIS.md` for the full
-control inventory and OWASP Top 10 mapping.
+signed-cookie session auth, CSRF tokens, parameterized queries, output escaping,
+rate limiting, security headers) so that an assessment can focus on verifying
+those controls hold up under testing — e.g. attempting to bypass CSRF protection,
+brute-forcing login, tampering with session cookies, probing for SQL injection /
+XSS, and checking for IDOR on `/profile`, `/courses/enroll`, and `/fees/pay`. See
+`SECURITY_ANALYSIS.md` for the full control inventory and OWASP Top 10 mapping.
 
-For a production deployment (out of scope here) you'd additionally want: a
-persistent session store (e.g. `connect-sqlite3` or Redis) instead of the default
-in-memory store, HTTPS termination, email verification, and account lockout/2FA.
+## Deploying to Vercel
 
-## Deploying to Render
+```bash
+npm install -g vercel   # or use `npx vercel`
+vercel login
+vercel                  # first deploy, follow the prompts
+vercel env add SESSION_SECRET production
+vercel env add TURSO_DATABASE_URL production
+vercel env add TURSO_AUTH_TOKEN production
+vercel env add NODE_ENV production   # value: production
+vercel --prod
+```
 
-A `render.yaml` blueprint is included, which provisions a web service with a
-persistent Disk for the SQLite file and auto-generates `SESSION_SECRET`.
+Or via the [Vercel dashboard](https://vercel.com/dashboard): **Add New → Project**,
+import the GitHub repo, then add the same four environment variables under
+**Settings → Environment Variables** before deploying.
 
-1. Push this repo to GitHub (Render deploys from a Git repo):
-   ```bash
-   git remote add origin <your-github-repo-url>
-   git push -u origin main
-   ```
+`vercel.json` routes every request to `api/index.js` (a thin wrapper around
+`server.js`) and tells Vercel to bundle `public/` and `views/` into the
+serverless function — both are read from disk at runtime (static assets, EJS
+templates) rather than `require()`-d, so they wouldn't be included otherwise.
+
+## Deploying to Render (alternative)
+
+A `render.yaml` blueprint is included as an alternative to Vercel — since the
+database now lives in Turso rather than on local disk, this works fine on
+Render's **free** plan (no paid Disk needed, unlike the original local-SQLite
+setup).
+
+1. Push this repo to GitHub.
 2. In the [Render dashboard](https://dashboard.render.com), choose
-   **New > Blueprint**, and connect the GitHub repo. Render reads
-   `render.yaml` and provisions the web service + disk automatically.
-3. This uses the **Starter** plan (not free) — a persistent Disk requires a
-   paid instance type. On the free tier, the SQLite file is wiped on every
-   redeploy/restart (the app still boots and re-seeds the two test accounts,
-   but any real registrations/payments/enrollments would be lost).
-4. Once deployed, Render gives you a `https://<service-name>.onrender.com`
-   URL with automatic HTTPS — `secure` cookies work out of the box since
-   `NODE_ENV=production` is set by the blueprint.
-5. To deploy updates later, just `git push` to the connected branch — Render
-   redeploys automatically.
-
-If you'd rather not use a paid Disk, an alternative for a demo/portfolio
-deployment is to skip persistence entirely and accept that the database
-resets on each deploy (remove the `disk:` block from `render.yaml` and the
-`DATABASE_PATH` env var, falling back to the in-repo path).
+   **New → Blueprint** and connect the repo. Render reads `render.yaml`.
+3. Render will prompt you to manually fill in `TURSO_DATABASE_URL` and
+   `TURSO_AUTH_TOKEN` (marked `sync: false` in the blueprint, since they're
+   sensitive and external) — `SESSION_SECRET` is auto-generated.
+4. Deploy — you'll get a `https://<service-name>.onrender.com` URL with HTTPS.
