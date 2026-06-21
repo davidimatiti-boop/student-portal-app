@@ -135,3 +135,31 @@ control inventory and OWASP Top 10 mapping.
 For a production deployment (out of scope here) you'd additionally want: a
 persistent session store (e.g. `connect-sqlite3` or Redis) instead of the default
 in-memory store, HTTPS termination, email verification, and account lockout/2FA.
+
+## Deploying to Render
+
+A `render.yaml` blueprint is included, which provisions a web service with a
+persistent Disk for the SQLite file and auto-generates `SESSION_SECRET`.
+
+1. Push this repo to GitHub (Render deploys from a Git repo):
+   ```bash
+   git remote add origin <your-github-repo-url>
+   git push -u origin main
+   ```
+2. In the [Render dashboard](https://dashboard.render.com), choose
+   **New > Blueprint**, and connect the GitHub repo. Render reads
+   `render.yaml` and provisions the web service + disk automatically.
+3. This uses the **Starter** plan (not free) — a persistent Disk requires a
+   paid instance type. On the free tier, the SQLite file is wiped on every
+   redeploy/restart (the app still boots and re-seeds the two test accounts,
+   but any real registrations/payments/enrollments would be lost).
+4. Once deployed, Render gives you a `https://<service-name>.onrender.com`
+   URL with automatic HTTPS — `secure` cookies work out of the box since
+   `NODE_ENV=production` is set by the blueprint.
+5. To deploy updates later, just `git push` to the connected branch — Render
+   redeploys automatically.
+
+If you'd rather not use a paid Disk, an alternative for a demo/portfolio
+deployment is to skip persistence entirely and accept that the database
+resets on each deploy (remove the `disk:` block from `render.yaml` and the
+`DATABASE_PATH` env var, falling back to the in-repo path).
